@@ -1,0 +1,156 @@
+## 1. Introduction ##
+
+import pandas as pd
+import re
+
+hn = pd.read_csv("hacker_news.csv")
+titles = hn['title']
+
+#creating a case insensitive padrão para contar o nmr de x que o tag SQL surge no titulo:
+pattern = r'sql'
+#contar o nmr de x q ocorre:
+sql_counts = titles.str.contains(pattern, flags=re.I).sum()
+
+
+## 2. Capture Groups ##
+
+hn_sql = hn[hn['title'].str.contains(r"\w+SQL", flags=re.I)].copy()
+
+hn_sql['flavor'] = hn_sql['title'].str.extract(r'(\w+sql)', flags=re.I)
+hn_sql['flavor'].value_counts()
+
+#limpar a coluna flavor tornando todos os valores em lowercase:
+hn_sql['flavor'] = hn_sql['flavor'].str.lower().copy()
+
+#criar uma tabela pivot com estas designações q apontam p SQL, e a sua média de comentários:
+sql_pivot = hn_sql.pivot_table(index='flavor', values='num_comments', aggfunc='mean')
+
+## 3. Using Capture Groups to Extract Data ##
+
+#criamos um padrão que nos vai capturar um subset x.x ([\d\.]+) q pretende ser qq 1ou + digitos e escapar à numeração especial ., de um subset Python x.x.:
+py_pattern = r'[pP]ython\s([\d\.]+)'
+
+py_versions_freq_2 = titles.str.extract(py_pattern).value_counts()
+
+py_versions_freq = dict(py_versions_freq_2)
+
+## 4. Counting Mentions of the 'C' Language ##
+
+def first_10_matches(pattern):
+    """
+    Return the first 10 story titles that match
+    the provided regular expression
+    """
+    all_matches = titles[titles.str.contains(pattern)]
+    first_10 = all_matches.head(10)
+    return first_10
+
+# criar um padrão que vá procurar tds as substrings q contenham C ou c, e q antes e depois tenha uma fronteira de uma palavra (\b), m que depois tb rejeite (^) todo o que tiver neste C ou C um ponto (.) ou um mais (+) --- [^+.]:
+pattern = r"\b[Cc]\b[^.+]"
+    
+first_ten = first_10_matches(pattern)
+
+## 5. Using Lookarounds to Control Matches Based on Surrounding Text ##
+
+pattern_C = r'(?<![Ss]eries\s)\b[Cc]\b(?![.+])'
+
+first_10_matches(pattern_C)
+
+c_mentions = titles.str.contains(pattern_C).sum()
+
+## 6. BackReferences: Using Capture Groups in a RegEx Pattern ##
+
+import re
+
+test_cases = [
+              "I'm going to read a book.",
+              "Green is my favorite color.",
+              "My name is Aaron and his name is Aaron is.",
+              "No doubles here.",
+              "I have a pet eel."
+             ]
+
+for w in test_cases:
+    print(re.search(r'(o){2}', w))
+#OU:
+
+for w in test_cases:
+    print(re.search(r'(o)\1', w))
+    
+pattern = r'\b(\w+)\s\1\b'
+
+#test = pd.Series(test_cases)
+#print(test.str.contains(pattern))
+
+repeated_words = titles[titles.str.contains(pattern)]
+
+## 7. Substituting Regular Expression Matches ##
+
+email_variations = pd.Series(['email', 'Email', 'e Mail',
+                        'e mail', 'E-mail', 'e-mail',
+                        'eMail', 'E-Mail', 'EMAIL'])
+
+s = 'Email email E mail e mail'
+
+print(re.sub(r'[eE]','€',s))
+#a mesma função mas para Pandas:
+print(email_variations.str.replace(r'[eE]', '€'))
+
+sql_variations = pd.Series(['SQL', 'sql', 'Sql'])
+sql_uniform = sql_variations.str.replace(r'sql', 'SQL', flags=re.I)
+print(sql_uniform)
+
+pattern_email = r'e[-\s]?mail'
+email_uniform = email_variations.str.replace(pattern_email, 'email', flags=re.I)
+print(email_uniform)
+
+titles_clean = titles.str.replace(pattern_email, 'email', flags=re.I)
+
+## 8. Extracting Domains from URLs ##
+
+import re
+
+test_urls = pd.Series([
+ 'https://www.amazon.com/Technology-Ventures-Enterprise-Thomas-Byers/dp/0073523429',
+ 'http://www.interactivedynamicvideo.com/',
+ 'http://www.nytimes.com/2007/11/07/movies/07stein.html?_r=0',
+ 'http://evonomics.com/advertising-cannot-maintain-internet-heres-solution/',
+ 'HTTPS://github.com/keppel/pinn',
+ 'Http://phys.org/news/2015-09-scale-solar-youve.html',
+ 'https://iot.seeed.cc',
+ 'http://www.bfilipek.com/2016/04/custom-deleters-for-c-smart-pointers.html',
+ 'http://beta.crowdfireapp.com/?beta=agnipath',
+ 'https://www.valid.ly?param',
+ 'http://css-cursor.techstream.org'
+])
+
+
+
+
+pattern_www = r'https?.\/{2}([w][w][w]\.[a-z]+\.[a-z]+|[a-z\-?]{2,}\.?\w+\.[a-z]{1,})'
+pattern_DQ = r'https?://([\w\-\.]+)'
+
+test_urls_clean = test_urls.str.extract(pattern_www, flags=re.I)
+
+domains = hn['url'].str.extract(pattern_DQ, flags=re.I)
+top_domains = domains.value_counts().head(5)
+
+#print(domains)
+
+## 9. Extracting URL Parts Using Multiple Capture Groups ##
+
+
+pattern_all_in = r'(https?):\/\/([\w\.\-]+)\/?([\w\.\-\?\/\_\d\=]+)'
+
+pattern_all_inn = r'(https?):\/\/([\w\.\-]+)\/?(.*)'
+
+test_url_parts = test_urls.str.extract(pattern_all_inn, flags=re.I)
+
+url_parts = hn['url'].str.extract(pattern_all_inn, re.I)
+
+## 10. Using Named Capture Groups to Extract Data ##
+
+pattern = r"(?P<protocol>https?)://(?P<domain>[\w\.\-]+)/?(?P<path>.*)"
+
+url_parts = hn['url'].str.extract(pattern, re.I)
+
