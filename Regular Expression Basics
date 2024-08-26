@@ -1,0 +1,147 @@
+## 1. Introduction ##
+
+import pandas as pd
+
+#reading  hacker_news file, and inspecting the first 5 rows:
+hn = pd.read_csv('hacker_news.csv')
+hd_head = hn.head()
+
+## 2. The Regular Expression Module ##
+
+import re
+
+titles = hn["title"].tolist()
+python_mentions = 0
+pattern = '[Pp]ython'
+
+patter_2 = '[Ii]nvest'
+invest_mentions = 0
+
+for pi in titles:
+    if re.search(pattern, pi):
+        python_mentions += 1      
+print(python_mentions)
+
+for i in titles:
+    if re.search(patter_2, i):
+        invest_mentions +=1
+print(invest_mentions)
+
+
+## 3. Counting Matches with pandas Methods ##
+
+pattern = '[Pp]ython'
+
+titles = hn['title']
+
+# fazer o mesmo processo que há pco, mas usando um método vectorizado desta vez - Series.srt.contains():
+python_mentions = titles.str.contains(pattern).sum()
+
+#um = True + True == 2
+
+#um == 1
+
+## 4. Using Regular Expressions to Select Data ##
+
+titles = hn['title']
+pattern_1 = '[Rr]uby'
+pattern_2 = '[Ii]nvestment'
+pattern_3 = '[Vv]aluation'
+
+ruby_titles = titles[titles.str.contains(pattern_1)]
+
+investment_titles = titles[titles.str.contains(pattern_2)].head()
+
+valuation_titles = titles[titles.str.contains(pattern_3)].head()
+valuation_hn = hn[titles.str.contains(pattern_3)]
+
+## 5. Quantifiers ##
+
+# The `titles` variable is available from
+# the previous screens
+
+#creating our pattern:
+pattern = 'e-?mail'
+# using our pattern and the contains method in order to return a boolean mask with the mathes: 
+email_bool = titles.str.contains(pattern)
+#counting the number of Trues in email_bool:
+email_count = email_bool.sum()
+# slicing in titles, only the ones that match our REGEX:
+email_titles = titles[email_bool]
+
+
+## 6. Character Classes ##
+
+# criar um padrão que, não só ignora os parenteses rectos (\[ e \]), como seleciona qq palavra e ou digito entre pelo menos um e mais (\w+):
+pattern = '\[\w+\]'
+
+tag_titles = titles[titles.str.contains(pattern)]
+tag_count = tag_titles.value_counts().sum()
+
+## 7. Accessing the Matching Text with Capture Groups ##
+
+pattern = r"\[(\w+)\]"
+
+tag_freq = titles.str.extract(pattern).value_counts()
+
+pattern_1 = r'(\[\w+\])'
+tag_freq_1 = titles.str.extract(pattern_1).value_counts()
+
+
+
+## 8. Negative Character Classes ##
+
+def first_10_matches(pattern):
+    """
+    Return the first 10 story titles that match
+    the provided regular expression
+    """
+    all_matches = titles[titles.str.contains(pattern)]
+    first_10 = all_matches.head(10)
+    return first_10
+
+pattern = r'[jJ]ava[^sS]'
+
+first_10_matches(pattern)
+
+java_titles = titles[titles.str.contains(pattern)]
+java_titles_sum = java_titles.value_counts().sum()
+
+pattern_1 = r'([jJ]ava)'
+#first_10_matches(pattern_1)
+java_titles_1 = titles[titles.str.contains(pattern_1)]
+java_titles_sum_1 = java_titles_1.value_counts().sum()
+
+## 9. Word Boundaries ##
+
+f_pattern = r'\b[Jj]ava\b'
+
+first_10_matches(f_pattern)
+
+java_titles = titles[titles.str.contains(f_pattern)]
+
+## 10. Matching at the Start and End of Strings ##
+
+pattern_b = r'^\[\w+\]'
+pattern_f = r'\[\w+\]$'
+
+beginning_count = titles.str.contains(pattern_b).sum()
+
+ending_count = titles.str.contains(pattern_f).sum()
+
+## 11. Challenge: Using Flags to Modify Regex Patterns ##
+
+import re
+
+email_tests = pd.Series(['email', 'Email', 'e Mail', 'e mail', 'E-mail',
+              'e-mail', 'eMail', 'E-Mail', 'EMAIL', 'emails', 'Emails',
+              'E-Mails'])
+
+# Este padrão criado vai fazer com que apenas sejam filtradas palavras que se iniciem com um espaço antes 
+pattern = r'\be-?\s?mails?'
+
+email_teste = email_tests.str.contains(pattern, flags=re.I).value_counts()
+
+email_mentions = titles.str.contains(pattern, flags=re.I).sum()
+
+emails = titles[email_mentions]
